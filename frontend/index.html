@@ -1,0 +1,755 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Audio Studio</title>
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg1: #0d1b3e;
+    --bg2: #1a2c5b;
+    --bg3: #243672;
+    --glass: rgba(255,255,255,0.08);
+    --glass-border: rgba(255,255,255,0.15);
+    --glass-hover: rgba(255,255,255,0.13);
+    --accent: #6eb5ff;
+    --accent2: #a78bfa;
+    --text: #e8f0fe;
+    --text-dim: rgba(232,240,254,0.6);
+    --success: #34d399;
+    --warn: #fbbf24;
+    --radius: 16px;
+  }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--bg1) 0%, var(--bg2) 50%, var(--bg3) 100%);
+    color: var(--text);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 40px 20px 60px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before, body::after {
+    content: '';
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+    z-index: 0;
+  }
+  body::before {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(110,181,255,0.15), transparent 70%);
+    top: -100px; right: -100px;
+  }
+  body::after {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(167,139,250,0.12), transparent 70%);
+    bottom: -80px; left: -80px;
+  }
+
+  .wrapper {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 680px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  header {
+    text-align: center;
+    animation: fadeDown 0.7s ease both;
+  }
+  .logo-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+  }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 4px 20px rgba(110,181,255,0.4);
+  }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, #fff 30%, var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  header p {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .card {
+    width: 100%;
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: 24px;
+    padding: 32px;
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .selector-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 10px;
+  }
+  .select-wrap {
+    position: relative;
+    margin-bottom: 28px;
+  }
+  select {
+    width: 100%;
+    padding: 14px 20px;
+    font-family: 'Sora', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text);
+    background: rgba(255,255,255,0.07);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    transition: border-color 0.2s, background 0.2s;
+    outline: none;
+  }
+  select:hover { background: var(--glass-hover); border-color: rgba(110,181,255,0.4); }
+  select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(110,181,255,0.15); }
+  select option { background: #1a2c5b; color: var(--text); }
+  .chevron {
+    position: absolute;
+    right: 16px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    color: var(--text-dim);
+    font-size: 12px;
+  }
+
+  .panel { display: none; animation: fadeUp 0.35s ease both; }
+  .panel.active { display: block; }
+
+  .divider {
+    height: 1px;
+    background: var(--glass-border);
+    margin: 0 0 24px;
+    border-radius: 2px;
+  }
+
+  .panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-title span.icon {
+    width: 34px; height: 34px;
+    background: linear-gradient(135deg, rgba(110,181,255,0.25), rgba(167,139,250,0.25));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+  }
+
+  .drop-zone {
+    border: 2px dashed rgba(110,181,255,0.35);
+    border-radius: var(--radius);
+    padding: 40px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--accent);
+    background: rgba(110,181,255,0.06);
+  }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-zone .dz-icon { font-size: 40px; margin-bottom: 12px; }
+  .drop-zone .dz-title { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+  .drop-zone .dz-sub { font-size: 0.8rem; color: var(--text-dim); }
+  .drop-zone .browse-btn {
+    display: inline-block;
+    margin-top: 14px;
+    padding: 8px 20px;
+    border-radius: 30px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+    box-shadow: 0 4px 14px rgba(110,181,255,0.3);
+  }
+  .drop-zone .browse-btn:hover { opacity: 0.88; transform: translateY(-1px); }
+  .formats { font-size: 0.73rem; color: var(--text-dim); margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
+  .selected-file {
+    margin-top: 14px;
+    padding: 10px 16px;
+    background: rgba(52,211,153,0.1);
+    border: 1px solid rgba(52,211,153,0.25);
+    border-radius: 10px;
+    font-size: 0.82rem;
+    color: var(--success);
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .selected-file.show { display: flex; }
+
+  .btn {
+    padding: 13px 32px;
+    border: none;
+    border-radius: 30px;
+    font-family: 'Sora', sans-serif;
+    font-size: 0.92rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(110,181,255,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(110,181,255,0.5); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--glass-border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--accent); background: rgba(110,181,255,0.08); }
+  .btn-danger {
+    background: linear-gradient(135deg, #f87171, #fb923c);
+    color: #fff;
+    box-shadow: 0 4px 16px rgba(248,113,113,0.3);
+  }
+  .btn-danger:hover { transform: translateY(-2px); }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .record-status {
+    text-align: center;
+    padding: 24px;
+    border-radius: var(--radius);
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--glass-border);
+    margin-bottom: 20px;
+  }
+  .record-indicator {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #4b5563;
+    margin: 0 auto 12px;
+    transition: background 0.3s;
+  }
+  .record-indicator.recording {
+    background: #f87171;
+    animation: pulse-rec 1.2s infinite;
+  }
+  .record-timer {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 2.2rem;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+  }
+  .record-label { font-size: 0.8rem; color: var(--text-dim); margin-top: 6px; }
+  audio {
+    width: 100%;
+    margin-top: 16px;
+    border-radius: 10px;
+    outline: none;
+  }
+
+  .mix-files { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+  .file-slot {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  .file-slot input[type="file"] { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+  .file-slot:hover { background: var(--glass-hover); border-color: rgba(110,181,255,0.35); }
+  .file-slot .slot-icon { font-size: 22px; }
+  .file-slot .slot-info { flex: 1; }
+  .file-slot .slot-label { font-size: 0.75rem; color: var(--text-dim); font-weight: 500; }
+  .file-slot .slot-name { font-size: 0.9rem; font-weight: 500; margin-top: 2px; }
+
+  .ai-info {
+    background: linear-gradient(135deg, rgba(110,181,255,0.1), rgba(167,139,250,0.1));
+    border: 1px solid rgba(110,181,255,0.2);
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+  .ai-info strong { color: var(--accent); }
+
+  /* Result box */
+  .result-box {
+    margin-top: 20px;
+    padding: 18px 20px;
+    border-radius: var(--radius);
+    background: rgba(52,211,153,0.08);
+    border: 1px solid rgba(52,211,153,0.2);
+    display: none;
+  }
+  .result-box.show { display: block; }
+  .result-box .result-label { font-size: 0.75rem; color: var(--success); font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; }
+  .result-box .result-class { font-size: 1.6rem; font-weight: 700; }
+  .result-box .result-conf { font-size: 0.82rem; color: var(--text-dim); margin-top: 4px; }
+  .confidence-bar { height: 5px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+  .confidence-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--success)); border-radius: 10px; transition: width 0.8s ease; }
+
+  /* Top-5 list */
+  .top5-list {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .top5-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.8rem;
+  }
+  .top5-item .t5-label { width: 140px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .top5-item .t5-bar-wrap { flex: 1; height: 4px; background: rgba(255,255,255,0.08); border-radius: 4px; overflow: hidden; }
+  .top5-item .t5-bar { height: 100%; background: linear-gradient(90deg, var(--accent2), var(--accent)); border-radius: 4px; transition: width 0.6s ease; }
+  .top5-item .t5-pct { width: 38px; text-align: right; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+
+  .error-box {
+    margin-top: 16px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.25);
+    font-size: 0.83rem;
+    color: #fca5a5;
+    display: none;
+  }
+  .error-box.show { display: flex; gap: 8px; align-items: flex-start; }
+
+  footer {
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    text-align: center;
+    letter-spacing: 0.04em;
+    animation: fadeUp 1s ease both;
+  }
+  footer span { color: var(--accent); font-weight: 500; }
+
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse-rec {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(248,113,113,0.5); }
+    50% { box-shadow: 0 0 0 8px rgba(248,113,113,0); }
+  }
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+  .spinner {
+    display: inline-block;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">🎵</div>
+      <h1>Smart Audio Studio</h1>
+    </div>
+    <p>CNN · Audio Classification &amp; Processing</p>
+  </header>
+
+  <div class="card">
+    <div class="selector-label">Select Feature</div>
+    <div class="select-wrap">
+      <select id="featureSelect" onchange="switchPanel(this.value)">
+        <option value="">— Select Feature —</option>
+        <option value="record">Record Audio</option>
+        <option value="upload">Upload Audio</option>
+        <option value="mix">Mix Two Audios</option>
+      </select>
+      <span class="chevron">▾</span>
+    </div>
+
+    <!-- Record Panel -->
+    <div class="panel" id="panel-record">
+      <div class="divider"></div>
+      <div class="panel-title">
+        <span class="icon">🎙️</span> Record Audio
+      </div>
+      <div class="record-status">
+        <div class="record-indicator" id="recIndicator"></div>
+        <div class="record-timer" id="recTimer">00:00</div>
+        <div class="record-label" id="recLabel">Ready to record</div>
+      </div>
+      <audio id="recAudio" controls></audio>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="startBtn" onclick="startRecording()">🎙️ &nbsp;Start</button>
+        <button class="btn btn-danger" id="stopBtn" onclick="stopRecording()" disabled>⏹ &nbsp;Stop</button>
+        <button class="btn btn-outline" id="classifyRecBtn" onclick="classifyRecording()" style="display:none">🔍 &nbsp;Classify</button>
+      </div>
+      <div class="result-box" id="recResult">
+        <div class="result-label">🎯 Classification Result</div>
+        <div class="result-class" id="recClass">—</div>
+        <div class="result-conf" id="recConf">—</div>
+        <div class="confidence-bar"><div class="confidence-fill" id="recBar" style="width:0%"></div></div>
+        <div class="top5-list" id="recTop5"></div>
+      </div>
+      <div class="error-box" id="recError"><span>⚠️</span><span id="recErrMsg"></span></div>
+    </div>
+
+    <!-- Upload Panel -->
+    <div class="panel" id="panel-upload">
+      <div class="divider"></div>
+      <div class="panel-title">
+        <span class="icon">📂</span> Upload Audio
+      </div>
+      <div class="drop-zone" id="dropZone" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropFile(event)">
+        <input type="file" id="uploadFile" accept=".wav,.mp3,.ogg,.flac,.m4a" onchange="fileChosen('uploadFile','uploadFileName')">
+        <div class="dz-icon">🎵</div>
+        <div class="dz-title">Drag &amp; drop audio here</div>
+        <div class="dz-sub">or click to browse</div>
+        <div class="browse-btn">Browse Files</div>
+        <div class="formats">WAV · MP3 · OGG · FLAC · M4A</div>
+      </div>
+      <div class="selected-file" id="uploadFileName"><span>✅</span><span></span></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="classifyUpload()">🔍 &nbsp;Classify Audio</button>
+      </div>
+      <div class="result-box" id="upResult">
+        <div class="result-label">🎯 Classification Result</div>
+        <div class="result-class" id="upClass">—</div>
+        <div class="result-conf" id="upConf">—</div>
+        <div class="confidence-bar"><div class="confidence-fill" id="upBar" style="width:0%"></div></div>
+        <div class="top5-list" id="upTop5"></div>
+      </div>
+      <div class="error-box" id="upError"><span>⚠️</span><span id="upErrMsg"></span></div>
+    </div>
+
+    <!-- Mix Panel -->
+    <div class="panel" id="panel-mix">
+      <div class="divider"></div>
+      <div class="panel-title">
+        <span class="icon">🎛️</span> Mix Two Audios
+      </div>
+      <div class="mix-files">
+        <div class="file-slot">
+          <input type="file" id="mixFile1" accept=".wav,.mp3,.ogg,.flac,.m4a" onchange="fileChosen(this,'mixFile1Name')">
+          <span class="slot-icon">🎵</span>
+          <div class="slot-info">
+            <div class="slot-label">Audio File 1</div>
+            <div class="slot-name" id="mixFile1Name">No file chosen</div>
+          </div>
+          <span style="color:var(--text-dim);font-size:18px">＋</span>
+        </div>
+        <div class="file-slot">
+          <input type="file" id="mixFile2" accept=".wav,.mp3,.ogg,.flac,.m4a" onchange="fileChosen(this,'mixFile2Name')">
+          <span class="slot-icon">🎶</span>
+          <div class="slot-info">
+            <div class="slot-label">Audio File 2</div>
+            <div class="slot-name" id="mixFile2Name">No file chosen</div>
+          </div>
+          <span style="color:var(--text-dim);font-size:18px">＋</span>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="mixAndClassify()">🎛️ &nbsp;Mix &amp; Classify</button>
+      </div>
+      <div class="result-box" id="mixResult">
+        <div class="result-label">🎯 Mix Classification Result</div>
+        <div class="result-class" id="mixClass">—</div>
+        <div class="result-conf" id="mixConf">—</div>
+        <div class="confidence-bar"><div class="confidence-fill" id="mixBar" style="width:0%"></div></div>
+        <div class="top5-list" id="mixTop5"></div>
+      </div>
+      <div class="error-box" id="mixError"><span>⚠️</span><span id="mixErrMsg"></span></div>
+    </div>
+
+  </div><!-- .card -->
+
+  <footer>
+    Smart Audio Studio &nbsp;·&nbsp; <span>CNN Classifier</span> &nbsp;·&nbsp; Built with Flask + TensorFlow
+  </footer>
+
+</div><!-- .wrapper -->
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const API_BASE = "http://127.0.0.1:5000";
+
+// ─── PANEL SWITCHING ───────────────────────────────────────────────────────
+function switchPanel(val) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  if (val) {
+    const panel = document.getElementById('panel-' + val);
+    if (panel) panel.classList.add('active');
+  }
+}
+
+// ─── FILE CHOSEN HELPERS ───────────────────────────────────────────────────
+function fileChosen(inputElOrId, labelId) {
+  const input = typeof inputElOrId === 'string' ? document.getElementById(inputElOrId) : inputElOrId;
+  const label = document.getElementById(labelId);
+  if (!input || !input.files || !input.files[0]) return;
+  const name = input.files[0].name;
+  if (label) {
+    if (label.classList.contains('selected-file')) {
+      label.querySelector('span:last-child').textContent = name;
+      label.classList.add('show');
+    } else {
+      label.textContent = name;
+    }
+  }
+}
+
+// ─── DRAG & DROP ───────────────────────────────────────────────────────────
+function dragOver(e) { e.preventDefault(); document.getElementById('dropZone').classList.add('drag-over'); }
+function dragLeave() { document.getElementById('dropZone').classList.remove('drag-over'); }
+function dropFile(e) {
+  e.preventDefault();
+  dragLeave();
+  const f = e.dataTransfer.files[0];
+  if (f) {
+    const dt = new DataTransfer();
+    dt.items.add(f);
+    document.getElementById('uploadFile').files = dt.files;
+    fileChosen('uploadFile', 'uploadFileName');
+  }
+}
+
+// ─── RECORDING ─────────────────────────────────────────────────────────────
+let audioCtx, processor, inputSource, recordedSamples = [], timerInterval, seconds = 0;
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    inputSource = audioCtx.createMediaStreamSource(stream);
+    processor = audioCtx.createScriptProcessor(4096, 1, 1);
+    recordedSamples = [];
+
+    processor.onaudioprocess = (e) => {
+      recordedSamples.push(new Float32Array(e.inputBuffer.getChannelData(0)));
+    };
+
+    inputSource.connect(processor);
+    processor.connect(audioCtx.destination);
+
+    document.getElementById('recIndicator').classList.add('recording');
+    document.getElementById('recLabel').textContent = 'Recording…';
+    document.getElementById('startBtn').disabled = true;
+    document.getElementById('stopBtn').disabled = false;
+    document.getElementById('classifyRecBtn').style.display = 'none';
+
+    seconds = 0;
+    timerInterval = setInterval(() => {
+      seconds++;
+      const m = String(Math.floor(seconds/60)).padStart(2,'0');
+      const s = String(seconds%60).padStart(2,'0');
+      document.getElementById('recTimer').textContent = m + ':' + s;
+    }, 1000);
+  } catch (err) {
+    showError('recError','recErrMsg','Microphone access denied: ' + err.message);
+  }
+}
+
+function stopRecording() {
+  if (processor) { processor.disconnect(); inputSource.disconnect(); }
+  if (audioCtx && audioCtx.state !== 'closed') audioCtx.close();
+  clearInterval(timerInterval);
+
+  document.getElementById('recIndicator').classList.remove('recording');
+  document.getElementById('startBtn').disabled = false;
+  document.getElementById('stopBtn').disabled = true;
+
+  const totalLength = recordedSamples.reduce((a, c) => a + c.length, 0);
+  const result = new Float32Array(totalLength);
+  let offset = 0;
+  for (const arr of recordedSamples) { result.set(arr, offset); offset += arr.length; }
+
+  const wavBlob = encodeWAV(result, 44100);
+  document.getElementById('recAudio').src = URL.createObjectURL(wavBlob);
+  document.getElementById('classifyRecBtn').style.display = 'inline-block';
+  document.getElementById('recLabel').textContent = 'Recording saved — ready to classify';
+  window.lastRecordedBlob = wavBlob;
+}
+
+function encodeWAV(samples, sampleRate) {
+  const buffer = new ArrayBuffer(44 + samples.length * 2);
+  const view = new DataView(buffer);
+  const ws = (off, str) => { for (let i = 0; i < str.length; i++) view.setUint8(off + i, str.charCodeAt(i)); };
+  ws(0,'RIFF'); view.setUint32(4, 36 + samples.length*2, true); ws(8,'WAVE'); ws(12,'fmt ');
+  view.setUint32(16,16,true); view.setUint16(20,1,true); view.setUint16(22,1,true);
+  view.setUint32(24,sampleRate,true); view.setUint32(28,sampleRate*2,true);
+  view.setUint16(32,2,true); view.setUint16(34,16,true); ws(36,'data');
+  view.setUint32(40,samples.length*2,true);
+  let off = 44;
+  for (let i = 0; i < samples.length; i++, off += 2) {
+    const s = Math.max(-1, Math.min(1, samples[i]));
+    view.setInt16(off, s < 0 ? s*0x8000 : s*0x7FFF, true);
+  }
+  return new Blob([view], { type: 'audio/wav' });
+}
+
+// ─── CLASSIFY FUNCTIONS ────────────────────────────────────────────────────
+async function classifyUpload() {
+  const input = document.getElementById('uploadFile');
+  if (!input.files[0]) return showError('upError','upErrMsg','Please choose a file first.');
+  showError('upError','upErrMsg','');
+  setLoading('upResult', 'upClass');
+  await callPredict([input.files[0]], 'upResult','upClass','upConf','upBar','upTop5','upError','upErrMsg');
+}
+
+async function classifyRecording() {
+  const blob = window.lastRecordedBlob;
+  if (!blob || !blob.size) return showError('recError','recErrMsg','No recording found.');
+  showError('recError','recErrMsg','');
+  setLoading('recResult', 'recClass');
+  const file = new File([blob], 'recording.wav', { type: 'audio/wav' });
+  await callPredict([file], 'recResult','recClass','recConf','recBar','recTop5','recError','recErrMsg');
+}
+
+async function mixAndClassify() {
+  const f1 = document.getElementById('mixFile1').files[0];
+  const f2 = document.getElementById('mixFile2').files[0];
+  if (!f1 || !f2) return showError('mixError','mixErrMsg','Please choose two files to mix.');
+  showError('mixError','mixErrMsg','');
+  setLoading('mixResult', 'mixClass');
+  await callPredict([f1, f2], 'mixResult','mixClass','mixConf','mixBar','mixTop5','mixError','mixErrMsg');
+}
+
+// ─── CORE API CALL  (BUG FIX: uses /predict and reads correct JSON fields) ──
+async function callPredict(files, resultId, classId, confId, barId, top5Id, errId, errMsgId) {
+  const fd = new FormData();
+  files.forEach(f => fd.append('files[]', f));   // ← correct field name for app.py
+
+  try {
+    const res = await fetch(`${API_BASE}/predict`, { method: 'POST', body: fd });  // ← /predict not /classify
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'HTTP ' + res.status }));
+      throw new Error(err.error || 'Server error ' + res.status);
+    }
+
+    const data = await res.json();
+
+    // ── Read from correct nested path: data.predictions.deep_model ──────────
+    const model = data.predictions && data.predictions.deep_model;
+    if (!model) throw new Error('No prediction returned from model. Check backend logs.');
+
+    const topLabel = model.top_label || 'Unknown';
+    const topConf  = model.top_confidence || 0;
+    const top5     = model.top5 || [];
+
+    // ── Show main result ────────────────────────────────────────────────────
+    const confPct = Math.round(topConf * 100);
+    document.getElementById(classId).textContent  = topLabel;
+    document.getElementById(confId).textContent   = 'Confidence: ' + confPct + '%';
+    document.getElementById(barId).style.width    = confPct + '%';
+    document.getElementById(resultId).classList.add('show');
+    document.getElementById(errId).classList.remove('show');
+
+    // ── Show top-5 breakdown ────────────────────────────────────────────────
+    const top5Container = document.getElementById(top5Id);
+    if (top5Container && top5.length) {
+      top5Container.innerHTML = top5.map(item => {
+        const pct = Math.round(item.confidence * 100);
+        return `
+          <div class="top5-item">
+            <span class="t5-label">${item.label}</span>
+            <div class="t5-bar-wrap"><div class="t5-bar" style="width:${pct}%"></div></div>
+            <span class="t5-pct">${pct}%</span>
+          </div>`;
+      }).join('');
+    }
+
+  } catch (e) {
+    showError(errId, errMsgId, e.message);
+    document.getElementById(resultId).classList.remove('show');
+  }
+}
+
+// ─── UI HELPERS ────────────────────────────────────────────────────────────
+function showError(boxId, msgId, msg) {
+  const box = document.getElementById(boxId);
+  if (msg) {
+    document.getElementById(msgId).textContent = msg;
+    box.classList.add('show');
+  } else {
+    box.classList.remove('show');
+  }
+}
+
+function setLoading(resultId, classId) {
+  const box = document.getElementById(resultId);
+  box.classList.add('show');
+  document.getElementById(classId).innerHTML = '<span class="spinner"></span> Analyzing…';
+}
+</script>
+</body>
+</html>
